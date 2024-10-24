@@ -1,0 +1,21 @@
+[package]
+name = "dayjs"
+version = "0.1.0"
+edition = "2021"
+description = "dayjs api for rust"
+authors = ["michaelbguo@tencent.com"]
+license = "MIT"
+repository = "https://github.com/guobin211/dayjs"
+documentation = "https://docs.rs/dayjs"
+keywords = ["date", "time", "day"]
+categories = ["date-and-time"]
+
+[dependencies]
+anyhow = "1.0.91"
+chrono = "0.4.38"
+dotenvy = "0.15.7"
+env_logger = "0.11.5"
+envy = "0.4.2"
+lazy_static = "1.5.0"
+log = "0.4.22"
+regex = "1.11.0"
