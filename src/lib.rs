@@ -199,13 +199,13 @@ pub fn from_timezone(tz: TimeZone) -> Dayjs {
     }
 }
 
-/// 解析日期时间字符串，支持 ISO 8601 格式（带时区偏移和 'Z' 后缀）以及 UTC 时间
+/// Parse date time string, supports ISO 8601 format (with timezone offset and 'Z' suffix) and UTC time
 ///
-/// # 参数
-/// - `s`: 待解析的日期时间字符串
+/// # Parameters
+/// - `s`: The date time string to be parsed
 ///
-/// # 返回值
-/// 解析成功返回 `DateTime<Utc>`，失败返回 `None`
+/// # Returns
+/// Returns `DateTime<Utc>` on successful parsing, `None` on failure
 pub fn parse_date_time(s: &str) -> Option<DateTime<Utc>> {
     if s.ends_with("UTC") || s.ends_with("utc") {
         let s = s.replace("UTC", "").replace("utc", "");
