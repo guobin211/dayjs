@@ -1,7 +1,3 @@
-//! # dayjs: dayjs api for Rust
-//!
-//! dayjs provides a simple and efficient way to work with date and time in Rust, inspired by the popular JavaScript library.
-//!
 use chrono::{
     DateTime, Datelike, FixedOffset, Local, Offset, TimeZone as CTimeZone, Timelike, Utc, Weekday,
 };
