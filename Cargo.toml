@@ -1,16 +1,15 @@
 [package]
 name = "dayjs"
-version = "0.1.1"
-edition = "2021"
-description = "dayjs api for rust"
+version = "0.1.3"
+edition = "2024"
 authors = ["michaelbguo@tencent.com"]
 license = "MIT"
 repository = "https://github.com/guobin211/dayjs"
 documentation = "https://docs.rs/dayjs"
-keywords = ["date", "time", "day"]
+keywords = ["dayjs", "day", "moment", "date", "time"]
 categories = ["date-and-time"]
+description = "a date and time library for Rust, inspired by day.js"
+readme = "README.md"
 
 [dependencies]
-chrono = "0.4.38"
-lazy_static = "1.5.0"
-regex = "1.11.0"
+chrono = "^0.4"
