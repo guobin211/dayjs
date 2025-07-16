@@ -3,8 +3,7 @@
 //! dayjs provides a simple and efficient way to work with date and time in Rust, inspired by the popular JavaScript library.
 //!
 use chrono::{
-    DateTime, Datelike, FixedOffset, Local, Offset, TimeZone as CTimeZone,
-    Timelike, Utc, Weekday,
+    DateTime, Datelike, FixedOffset, Local, Offset, TimeZone as CTimeZone, Timelike, Utc, Weekday,
 };
 use std::fmt::{Display, Formatter};
 
@@ -34,9 +33,9 @@ impl TimeZone {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Dayjs {
     /// Time zone information
-    tz: TimeZone,
+    pub(crate) tz: TimeZone,
     /// UTC time
-    time: DateTime<Utc>,
+    pub(crate) time: DateTime<Utc>,
 }
 
 impl Default for Dayjs {
@@ -251,6 +250,9 @@ pub trait DisplayTime {
 
     /// Fromats to gmt string. "Fri, 25 Jan 2019 00:00:00 GMT"
     fn to_gmt(&self) -> String;
+
+    /// Converts the time to a timestamp in seconds.
+    fn to_timestamp(&self) -> i64;
 }
 
 impl DisplayTime for Dayjs {
@@ -307,6 +309,11 @@ impl DisplayTime for Dayjs {
             dt.minute(),
             dt.second()
         )
+    }
+
+    fn to_timestamp(&self) -> i64 {
+        let dt = self.time;
+        dt.timestamp()
     }
 }
 
