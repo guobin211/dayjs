@@ -163,15 +163,13 @@ impl Dayjs {
     /// - `template`: %Y-%m-%d %H:%M:%S
     ///
     /// # Examples
-    /// ```no-run
+    /// ```
     /// let now = dayjs::dayjs();
     /// let formatted = now.format("%Y-%m-%d %H:%M:%S");
     /// println!("{}", formatted);
     /// // 2025-03-25 17:21:47
     /// ```
     ///
-    /// # Returns
-    /// Formatted date time string.
     pub fn format(&self, template: &str) -> String {
         self.time.format(template).to_string()
     }
@@ -188,6 +186,11 @@ impl Dayjs {
 
     /// Get the current time in UTC.
     pub fn get_timestamp(&self) -> i64 {
+        self.time.timestamp()
+    }
+
+    /// Get the current time in secend.
+    pub fn timestap(&self) -> i64 {
         self.time.timestamp()
     }
 
