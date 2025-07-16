@@ -7,6 +7,23 @@ use std::fmt::{Display, Formatter};
 pub use chrono;
 
 /// TimeZone enum for representing different time zone formats.
+///
+/// It can represent:
+/// - Time zone offset as a string (e.g., "+08:00")
+/// - Time zone city as a string (e.g., "Asia/Shanghai")
+/// - Time zone number as an integer (-12 to +12)
+///
+/// # Examples
+///
+/// ```
+/// use dayjs::TimeZone;
+///
+/// let tz_offset = TimeZone::TimeZoneTime("+08:00".to_string());
+///
+/// let tz_city = TimeZone::TimeZoneCity("Asia/Shanghai".to_string());
+///
+/// let tz_number = TimeZone::TimeZoneNumber(8);
+///
 #[derive(Clone, Debug, PartialEq)]
 pub enum TimeZone {
     // 时区偏移, 如: "+08:00"
@@ -26,6 +43,16 @@ impl TimeZone {
 }
 
 /// Dayjs struct representing a date and time with a time zone.
+///
+/// It contains:
+/// - `tz`: The time zone information as a `TimeZone` enum.
+/// - `time`: The UTC time as a `DateTime<Utc>`.
+///
+/// # Examples
+/// ```
+/// use dayjs::{dayjs, Dayjs, TimeZone};
+/// let now = dayjs();
+/// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct Dayjs {
     /// Time zone information
@@ -44,21 +71,60 @@ impl Default for Dayjs {
 }
 
 /// UTC Timestamp, eg: 143164800
+///
+/// # Examples
+/// ```
+/// use dayjs::timestamp;
+/// let ts = timestamp();
+/// println!("Current UTC timestamp: {}", ts);
+/// ```
+///
 pub fn timestamp() -> i64 {
     Utc::now().timestamp()
 }
 
 /// Create a new Dayjs instance with the current time.
+///
+/// # Examples
+/// ```
+/// use dayjs::dayjs;
+/// let now = dayjs();
+/// println!("Current time: {}", now);
+/// ```
 pub fn dayjs() -> Dayjs {
     Dayjs::default()
 }
 
 /// Create a new Dayjs instance with the current time.
+/// This is an alias for `dayjs()`.
+/// # Examples
+/// ```
+/// use dayjs::now;
+/// let current_time = now();
+/// println!("Current time: {}", current_time);
+/// ```
 pub fn now() -> Dayjs {
     Dayjs::default()
 }
 
 /// Get Dayjs instance from a string representation of date time.
+///
+/// # Parameters
+/// - `s`: A string representing the date time, which can be in various formats such as ISO 8601, RFC 3339, or RFC 2822.
+/// # Returns
+/// - `Ok(Dayjs)`: If the string is successfully parsed into a `DateTime<Utc>`.
+/// - `Err(String)`: If the string cannot be parsed, an error message is returned.
+///
+/// # Examples
+/// ```
+/// use dayjs::from_str;
+/// let date_str = "2023-10-01T12:00:00Z";
+/// let dayjs_instance = from_str(date_str);
+/// match dayjs_instance {
+///     Ok(dayjs) => println!("Parsed Dayjs: {}", dayjs),
+///     Err(e) => println!("Error parsing date: {}", e),
+/// }
+/// ```
 pub fn from_str(s: &str) -> Result<Dayjs, String> {
     let time: DateTime<Utc> =
         parse_date_time(s).ok_or_else(|| format!("Failed to parse date time from string: {s}"))?;
@@ -69,6 +135,22 @@ pub fn from_str(s: &str) -> Result<Dayjs, String> {
 }
 
 /// Get Dayjs instance from an integer timestamp.
+/// # Parameters
+/// - `n`: An integer representing the timestamp, which can be in seconds (10 digits) or milliseconds (13 digits).
+/// # Returns
+/// - `Ok(Dayjs)`: If the integer is successfully converted to a `DateTime<Utc>`.
+/// - `Err(String)`: If the integer is not a valid timestamp or does not match the expected length (10 or 13 digits).
+///
+/// # Examples
+/// ```
+/// use dayjs::from_int64;
+/// let timestamp = 1633072800; // Example timestamp in seconds
+/// let dayjs_instance = from_int64(timestamp);
+/// match dayjs_instance {
+///     Ok(dayjs) => println!("Parsed Dayjs: {}", dayjs),
+///     Err(e) => println!("Error parsing timestamp: {}", e),
+/// }
+/// ```
 pub fn from_int64(n: i64) -> Result<Dayjs, String> {
     let len = format!("{n}").len();
     match len {
@@ -97,6 +179,19 @@ pub fn from_int64(n: i64) -> Result<Dayjs, String> {
 }
 
 /// Get the current time zone of the Dayjs instance.
+///
+/// # Parameters
+/// - `tz`: A `TimeZone` enum representing the desired time zone.
+/// # Returns
+/// A `Dayjs` instance with the specified time zone and the current UTC time.
+///
+/// # Examples
+/// ```
+/// use dayjs::{from_timezone, TimeZone};
+/// let tz = TimeZone::TimeZoneTime("+08:00".to_string());
+/// let dayjs_instance = from_timezone(tz);
+/// println!("Current time in specified timezone: {}", dayjs_instance);
+/// ```
 pub fn from_timezone(tz: TimeZone) -> Dayjs {
     Dayjs {
         tz,
@@ -255,6 +350,7 @@ pub trait DisplayTime {
 }
 
 impl DisplayTime for Dayjs {
+    /// Formats the date time to an array string.
     fn to_array(&self) -> String {
         let dt = self.time;
         format!(
@@ -269,6 +365,7 @@ impl DisplayTime for Dayjs {
         )
     }
 
+    /// Formats the date time to an ISO 8601 string.
     fn to_iso(&self) -> String {
         let dt = self.time;
         format!(
@@ -283,6 +380,7 @@ impl DisplayTime for Dayjs {
         )
     }
 
+    /// Formats the date time to a UTC string.
     fn to_utc(&self) -> String {
         let dt = self.time;
         format!(
@@ -296,6 +394,7 @@ impl DisplayTime for Dayjs {
         )
     }
 
+    /// Formats the date time to a GMT string.
     fn to_gmt(&self) -> String {
         let dt = self.time;
         format!(
@@ -310,6 +409,7 @@ impl DisplayTime for Dayjs {
         )
     }
 
+    /// Converts the time to a timestamp in seconds.
     fn to_timestamp(&self) -> i64 {
         let dt = self.time;
         dt.timestamp()
@@ -374,16 +474,19 @@ pub trait OperationTime {
 }
 
 impl OperationTime for Dayjs {
+    /// Add a duration to the current time.
     fn add(&mut self, timestamp: i32) {
         let dt = self.time + chrono::Duration::seconds(timestamp as i64);
         self.time = dt;
     }
 
+    /// Add a duration to the current time in year.
     fn add_years(&mut self, years: i32) {
         let dt = self.time + chrono::Duration::days((years * 365) as i64);
         self.time = dt;
     }
 
+    /// Add a duration to the current time in month.
     fn add_months(&mut self, months: i32) {
         let mut dt = self.time;
         for _ in 0..months {
@@ -392,46 +495,55 @@ impl OperationTime for Dayjs {
         self.time = dt;
     }
 
+    /// Add a duration to the current time in week.
     fn add_weeks(&mut self, weeks: i32) {
         let dt = self.time + chrono::Duration::weeks(weeks as i64);
         self.time = dt;
     }
 
+    /// Add a duration to the current time in day.
     fn add_days(&mut self, days: i32) {
         let dt = self.time + chrono::Duration::days(days as i64);
         self.time = dt;
     }
 
+    /// Add a duration to the current time in hours.
     fn add_hours(&mut self, hours: i32) {
         let dt = self.time + chrono::Duration::hours(hours as i64);
         self.time = dt;
     }
 
+    /// Add a duration to the current time in minutes.
     fn add_minutes(&mut self, minutes: i32) {
         let dt = self.time + chrono::Duration::minutes(minutes as i64);
         self.time = dt;
     }
 
+    /// Add a duration to the current time in seconds.
     fn add_seconds(&mut self, seconds: i32) {
         let dt = self.time + chrono::Duration::seconds(seconds as i64);
         self.time = dt;
     }
 
+    /// Add a duration to the current time in milliseconds.
     fn add_milliseconds(&mut self, milliseconds: i32) {
         let dt = self.time + chrono::Duration::milliseconds(milliseconds as i64);
         self.time = dt;
     }
 
+    /// Subtract a duration from the current time.
     fn subtract(&mut self, timestamp: i32) {
         let dt = self.time - chrono::Duration::seconds(timestamp as i64);
         self.time = dt;
     }
 
+    /// Subtract a duration from the current time in year.
     fn subtract_years(&mut self, years: i32) {
         let dt = self.time - chrono::Duration::days(years as i64);
         self.time = dt;
     }
 
+    /// Subtract a duration from the current time in month.
     fn subtract_months(&mut self, months: i32) {
         let mut dt = self.time;
         for _ in 0..months {
@@ -440,31 +552,37 @@ impl OperationTime for Dayjs {
         self.time = dt;
     }
 
+    /// Subtract a duration from the current time in week.
     fn subtract_weeks(&mut self, weeks: i32) {
         let dt = self.time - chrono::Duration::weeks(weeks as i64);
         self.time = dt;
     }
 
+    /// Subtract a duration from the current time in day.
     fn subtract_days(&mut self, days: i32) {
         let dt = self.time - chrono::Duration::days(days as i64);
         self.time = dt;
     }
 
+    /// Subtract a duration from the current time in hours.
     fn subtract_hours(&mut self, hours: i32) {
         let dt = self.time - chrono::Duration::hours(hours as i64);
         self.time = dt;
     }
 
+    /// Subtract a duration from the current time in minutes.
     fn subtract_minutes(&mut self, minutes: i32) {
         let dt = self.time - chrono::Duration::minutes(minutes as i64);
         self.time = dt;
     }
 
+    /// Subtract a duration from the current time in seconds.
     fn subtract_seconds(&mut self, seconds: i32) {
         let dt = self.time - chrono::Duration::seconds(seconds as i64);
         self.time = dt;
     }
 
+    /// Subtract a duration from the current time in milliseconds.
     fn subtract_milliseconds(&mut self, milliseconds: i32) {
         let dt = self.time - chrono::Duration::milliseconds(milliseconds as i64);
         self.time = dt;
