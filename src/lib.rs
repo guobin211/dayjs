@@ -280,8 +280,8 @@ impl Dayjs {
         self.time.timestamp()
     }
 
-    /// Get the current time in secend.
-    pub fn timestap(&self) -> i64 {
+    /// Get the current time in second.
+    pub fn timestamp(&self) -> i64 {
         self.time.timestamp()
     }
 
@@ -333,16 +333,16 @@ impl Dayjs {
 
 /// Trait for displaying time in various formats.
 pub trait DisplayTime {
-    /// Fromats to array string. [ 2019, 0, 25, 0, 0, 0, 0 ]
+    /// Formats to array string. [ 2019, 0, 25, 0, 0, 0, 0 ]
     fn to_array(&self) -> String;
 
-    /// Fromats to iso string. "2019-01-25T02:00:00.000Z"
+    /// Formats to iso string. "2019-01-25T02:00:00.000Z"
     fn to_iso(&self) -> String;
 
-    /// Fromats to utc string. "2019-01-25 00:00:00 +00:00"
+    /// Formats to utc string. "2019-01-25 00:00:00 +00:00"
     fn to_utc(&self) -> String;
 
-    /// Fromats to gmt string. "Fri, 25 Jan 2019 00:00:00 GMT"
+    /// Formats to gmt string. "Fri, 25 Jan 2019 00:00:00 GMT"
     fn to_gmt(&self) -> String;
 
     /// Converts the time to a timestamp in seconds.
