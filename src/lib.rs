@@ -1,10 +1,10 @@
-use chrono::{
-    DateTime, Datelike, FixedOffset, Local, Offset, TimeZone as CTimeZone, Timelike, Utc, Weekday,
-};
-use std::fmt::{Display, Formatter};
-
 /// re-export chrono
 pub use chrono;
+use chrono::{
+    DateTime, Datelike, Local, NaiveDate, NaiveDateTime, NaiveTime, Offset, TimeZone as CTimeZone,
+    Timelike, Utc, Weekday,
+};
+use std::fmt::{Display, Formatter};
 
 /// TimeZone enum for representing different time zone formats.
 ///
@@ -207,6 +207,9 @@ pub fn from_timezone(tz: TimeZone) -> Dayjs {
 /// # Returns
 /// Returns `DateTime<Utc>` on successful parsing, `None` on failure
 pub fn parse_date_time(s: &str) -> Option<DateTime<Utc>> {
+    let s = s.trim();
+
+    // Handle UTC suffix
     if s.ends_with("UTC") || s.ends_with("utc") {
         let s = s.replace("UTC", "").replace("utc", "");
         let s = s.trim_end();
@@ -215,27 +218,60 @@ pub fn parse_date_time(s: &str) -> Option<DateTime<Utc>> {
             return Some(dt.with_timezone(&Utc));
         }
     }
+
+    // Try RFC3339 format
     if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
         return Some(dt.with_timezone(&Utc));
     }
+
+    // Try RFC2822 format
     if let Ok(dt) = DateTime::parse_from_rfc2822(s) {
         return Some(dt.with_timezone(&Utc));
     }
-    if let Some(offset) = FixedOffset::east_opt(0) {
-        if let Ok(dt) = DateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S%.f %z") {
-            return Some(dt.with_timezone(&offset).with_timezone(&Utc));
-        }
-        if let Ok(dt) = DateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S%.fZ") {
-            return Some(dt.with_timezone(&offset).with_timezone(&Utc));
-        }
-        if let Ok(dt) = DateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S %:z") {
-            return Some(dt.with_timezone(&offset).with_timezone(&Utc));
-        }
-        let s = format!("{} {}", s, "+00:00");
-        if let Ok(dt) = DateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S %:z") {
-            return Some(dt.with_timezone(&offset).with_timezone(&Utc));
+
+    // Try various formats with timezone
+    let formats_with_tz = [
+        "%Y-%m-%d %H:%M:%S%.f %z",
+        "%Y-%m-%dT%H:%M:%S%.fZ",
+        "%Y-%m-%d %H:%M:%S %:z",
+        "%Y-%m-%dT%H:%M:%S%:z",
+        "%Y-%m-%dT%H:%M:%S%.f%:z",
+        "%Y/%m/%d %H:%M:%S %:z",
+    ];
+
+    for fmt in &formats_with_tz {
+        if let Ok(dt) = DateTime::parse_from_str(s, fmt) {
+            return Some(dt.with_timezone(&Utc));
         }
     }
+
+    // Try formats without timezone (assume UTC)
+    let formats_without_tz = [
+        "%Y-%m-%d %H:%M:%S%.f",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S%.f",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y/%m/%d %H:%M:%S",
+        "%Y/%m/%d",
+        "%Y-%m-%d",
+    ];
+
+    for fmt in &formats_without_tz {
+        if let Ok(ndt) = NaiveDateTime::parse_from_str(s, fmt) {
+            return Some(ndt.and_utc());
+        }
+    }
+
+    // Try date only formats
+    let date_formats = ["%Y-%m-%d", "%Y/%m/%d", "%d-%m-%Y", "%d/%m/%Y"];
+
+    for fmt in &date_formats {
+        if let Ok(nd) = NaiveDate::parse_from_str(s, fmt) {
+            let ndt = nd.and_time(NaiveTime::from_hms_opt(0, 0, 0)?);
+            return Some(ndt.and_utc());
+        }
+    }
+
     None
 }
 
@@ -329,6 +365,248 @@ impl Dayjs {
     pub fn month_of_year(&self) -> u32 {
         self.time.month()
     }
+
+    /// Get the year
+    pub fn year(&self) -> i32 {
+        self.time.year()
+    }
+
+    /// Get the month (0-11, JavaScript style)
+    pub fn month(&self) -> u32 {
+        self.time.month0()
+    }
+
+    /// Set the year
+    pub fn set_year(&mut self, year: i32) {
+        if let Some(dt) = self.time.with_year(year) {
+            self.time = dt;
+        }
+    }
+
+    /// Set the month (1-12)
+    pub fn set_month(&mut self, month: u32) {
+        if let Some(dt) = self.time.with_month(month) {
+            self.time = dt;
+        }
+    }
+
+    /// Set the day of month (1-31)
+    pub fn set_date(&mut self, day: u32) {
+        if let Some(dt) = self.time.with_day(day) {
+            self.time = dt;
+        }
+    }
+
+    /// Set the hour (0-23)
+    pub fn set_hour(&mut self, hour: u32) {
+        if let Some(dt) = self.time.with_hour(hour) {
+            self.time = dt;
+        }
+    }
+
+    /// Set the minute (0-59)
+    pub fn set_minute(&mut self, minute: u32) {
+        if let Some(dt) = self.time.with_minute(minute) {
+            self.time = dt;
+        }
+    }
+
+    /// Set the second (0-59)
+    pub fn set_second(&mut self, second: u32) {
+        if let Some(dt) = self.time.with_second(second) {
+            self.time = dt;
+        }
+    }
+
+    /// Set the millisecond (0-999)
+    pub fn set_millisecond(&mut self, ms: u32) {
+        if let Some(dt) = self.time.with_nanosecond(ms * 1_000_000) {
+            self.time = dt;
+        }
+    }
+
+    /// Get start of a unit of time
+    pub fn start_of(&self, unit: &str) -> Dayjs {
+        let mut result = self.clone();
+        match unit.to_lowercase().as_str() {
+            "year" => {
+                result.time = result
+                    .time
+                    .with_month(1)
+                    .and_then(|t| t.with_day(1))
+                    .and_then(|t| t.with_hour(0))
+                    .and_then(|t| t.with_minute(0))
+                    .and_then(|t| t.with_second(0))
+                    .and_then(|t| t.with_nanosecond(0))
+                    .unwrap_or(result.time);
+            }
+            "month" => {
+                result.time = result
+                    .time
+                    .with_day(1)
+                    .and_then(|t| t.with_hour(0))
+                    .and_then(|t| t.with_minute(0))
+                    .and_then(|t| t.with_second(0))
+                    .and_then(|t| t.with_nanosecond(0))
+                    .unwrap_or(result.time);
+            }
+            "week" => {
+                let weekday = result.time.weekday().num_days_from_sunday();
+                result.time = (result.time - chrono::Duration::days(weekday as i64))
+                    .with_hour(0)
+                    .and_then(|t| t.with_minute(0))
+                    .and_then(|t| t.with_second(0))
+                    .and_then(|t| t.with_nanosecond(0))
+                    .unwrap_or(result.time);
+            }
+            "day" | "date" => {
+                result.time = result
+                    .time
+                    .with_hour(0)
+                    .and_then(|t| t.with_minute(0))
+                    .and_then(|t| t.with_second(0))
+                    .and_then(|t| t.with_nanosecond(0))
+                    .unwrap_or(result.time);
+            }
+            "hour" => {
+                result.time = result
+                    .time
+                    .with_minute(0)
+                    .and_then(|t| t.with_second(0))
+                    .and_then(|t| t.with_nanosecond(0))
+                    .unwrap_or(result.time);
+            }
+            "minute" => {
+                result.time = result
+                    .time
+                    .with_second(0)
+                    .and_then(|t| t.with_nanosecond(0))
+                    .unwrap_or(result.time);
+            }
+            "second" => {
+                result.time = result.time.with_nanosecond(0).unwrap_or(result.time);
+            }
+            _ => {}
+        }
+        result
+    }
+
+    /// Get end of a unit of time
+    pub fn end_of(&self, unit: &str) -> Dayjs {
+        let mut result = self.clone();
+        match unit.to_lowercase().as_str() {
+            "year" => {
+                result.time = result
+                    .time
+                    .with_month(12)
+                    .and_then(|t| t.with_day(31))
+                    .and_then(|t| t.with_hour(23))
+                    .and_then(|t| t.with_minute(59))
+                    .and_then(|t| t.with_second(59))
+                    .and_then(|t| t.with_nanosecond(999_999_999))
+                    .unwrap_or(result.time);
+            }
+            "month" => {
+                let next_month = result.time.with_day(1).and_then(|t| {
+                    if t.month() == 12 {
+                        t.with_year(t.year() + 1).and_then(|t| t.with_month(1))
+                    } else {
+                        t.with_month(t.month() + 1)
+                    }
+                });
+                if let Some(next) = next_month {
+                    result.time = (next - chrono::Duration::days(1))
+                        .with_hour(23)
+                        .and_then(|t| t.with_minute(59))
+                        .and_then(|t| t.with_second(59))
+                        .and_then(|t| t.with_nanosecond(999_999_999))
+                        .unwrap_or(result.time);
+                }
+            }
+            "week" => {
+                let weekday = result.time.weekday().num_days_from_sunday();
+                let days_to_saturday = 6 - weekday;
+                result.time = (result.time + chrono::Duration::days(days_to_saturday as i64))
+                    .with_hour(23)
+                    .and_then(|t| t.with_minute(59))
+                    .and_then(|t| t.with_second(59))
+                    .and_then(|t| t.with_nanosecond(999_999_999))
+                    .unwrap_or(result.time);
+            }
+            "day" | "date" => {
+                result.time = result
+                    .time
+                    .with_hour(23)
+                    .and_then(|t| t.with_minute(59))
+                    .and_then(|t| t.with_second(59))
+                    .and_then(|t| t.with_nanosecond(999_999_999))
+                    .unwrap_or(result.time);
+            }
+            "hour" => {
+                result.time = result
+                    .time
+                    .with_minute(59)
+                    .and_then(|t| t.with_second(59))
+                    .and_then(|t| t.with_nanosecond(999_999_999))
+                    .unwrap_or(result.time);
+            }
+            "minute" => {
+                result.time = result
+                    .time
+                    .with_second(59)
+                    .and_then(|t| t.with_nanosecond(999_999_999))
+                    .unwrap_or(result.time);
+            }
+            "second" => {
+                result.time = result
+                    .time
+                    .with_nanosecond(999_999_999)
+                    .unwrap_or(result.time);
+            }
+            _ => {}
+        }
+        result
+    }
+
+    /// Clone the Dayjs instance
+    pub fn clone_dayjs(&self) -> Dayjs {
+        self.clone()
+    }
+
+    /// Get the number of days in the month
+    pub fn days_in_month(&self) -> u32 {
+        let year = self.time.year();
+        let month = self.time.month();
+        if month == 12 {
+            NaiveDate::from_ymd_opt(year + 1, 1, 1)
+        } else {
+            NaiveDate::from_ymd_opt(year, month + 1, 1)
+        }
+        .and_then(|d| d.pred_opt())
+        .map(|d| d.day())
+        .unwrap_or(30)
+    }
+
+    /// Check if the year is a leap year
+    pub fn is_leap_year(&self) -> bool {
+        let year = self.time.year();
+        (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+    }
+
+    /// Convert to JavaScript Date valueOf (milliseconds since epoch)
+    pub fn value_of(&self) -> i64 {
+        self.time.timestamp_millis()
+    }
+
+    /// Convert to Unix timestamp (seconds since epoch)
+    pub fn unix(&self) -> i64 {
+        self.time.timestamp()
+    }
+
+    /// Check if the Dayjs object is valid
+    pub fn is_valid(&self) -> bool {
+        true
+    }
 }
 
 /// Trait for displaying time in various formats.
@@ -413,6 +691,233 @@ impl DisplayTime for Dayjs {
     fn to_timestamp(&self) -> i64 {
         let dt = self.time;
         dt.timestamp()
+    }
+}
+
+/// Unit enum for time operations
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Unit {
+    Year,
+    Month,
+    Week,
+    Day,
+    Hour,
+    Minute,
+    Second,
+    Millisecond,
+}
+
+impl Unit {
+    #[allow(clippy::should_implement_trait)]
+    pub fn from_str(s: &str) -> Result<Unit, String> {
+        match s.to_lowercase().as_str() {
+            "year" | "years" | "y" => Ok(Unit::Year),
+            "month" | "months" => Ok(Unit::Month),
+            "week" | "weeks" | "w" => Ok(Unit::Week),
+            "day" | "days" | "d" => Ok(Unit::Day),
+            "hour" | "hours" | "h" => Ok(Unit::Hour),
+            "minute" | "minutes" | "m" => Ok(Unit::Minute),
+            "second" | "seconds" | "s" => Ok(Unit::Second),
+            "millisecond" | "milliseconds" | "ms" => Ok(Unit::Millisecond),
+            _ => Err(format!("Unknown unit: {}", s)),
+        }
+    }
+}
+
+/// Trait for querying and comparing times
+pub trait QueryTime {
+    /// Check if this time is before another time
+    fn is_before(&self, other: &Dayjs) -> bool;
+
+    /// Check if this time is before another time with unit granularity
+    fn is_before_unit(&self, other: &Dayjs, unit: Unit) -> bool;
+
+    /// Check if this time is after another time
+    fn is_after(&self, other: &Dayjs) -> bool;
+
+    /// Check if this time is after another time with unit granularity
+    fn is_after_unit(&self, other: &Dayjs, unit: Unit) -> bool;
+
+    /// Check if this time is the same as another time
+    fn is_same(&self, other: &Dayjs) -> bool;
+
+    /// Check if this time is the same as another time with unit granularity
+    fn is_same_unit(&self, other: &Dayjs, unit: Unit) -> bool;
+
+    /// Check if this time is the same or before another time
+    fn is_same_or_before(&self, other: &Dayjs) -> bool;
+
+    /// Check if this time is the same or after another time
+    fn is_same_or_after(&self, other: &Dayjs) -> bool;
+
+    /// Check if this time is between two other times
+    fn is_between(&self, start: &Dayjs, end: &Dayjs) -> bool;
+
+    /// Check if this time is between two other times with unit granularity
+    fn is_between_unit(&self, start: &Dayjs, end: &Dayjs, unit: Unit) -> bool;
+}
+
+impl QueryTime for Dayjs {
+    fn is_before(&self, other: &Dayjs) -> bool {
+        self.time < other.time
+    }
+
+    fn is_before_unit(&self, other: &Dayjs, unit: Unit) -> bool {
+        let unit_str = match unit {
+            Unit::Year => "year",
+            Unit::Month => "month",
+            Unit::Week => "week",
+            Unit::Day => "day",
+            Unit::Hour => "hour",
+            Unit::Minute => "minute",
+            Unit::Second => "second",
+            Unit::Millisecond => return self.time < other.time,
+        };
+        self.start_of(unit_str).time < other.start_of(unit_str).time
+    }
+
+    fn is_after(&self, other: &Dayjs) -> bool {
+        self.time > other.time
+    }
+
+    fn is_after_unit(&self, other: &Dayjs, unit: Unit) -> bool {
+        let unit_str = match unit {
+            Unit::Year => "year",
+            Unit::Month => "month",
+            Unit::Week => "week",
+            Unit::Day => "day",
+            Unit::Hour => "hour",
+            Unit::Minute => "minute",
+            Unit::Second => "second",
+            Unit::Millisecond => return self.time > other.time,
+        };
+        self.start_of(unit_str).time > other.start_of(unit_str).time
+    }
+
+    fn is_same(&self, other: &Dayjs) -> bool {
+        self.time == other.time
+    }
+
+    fn is_same_unit(&self, other: &Dayjs, unit: Unit) -> bool {
+        let unit_str = match unit {
+            Unit::Year => "year",
+            Unit::Month => "month",
+            Unit::Week => "week",
+            Unit::Day => "day",
+            Unit::Hour => "hour",
+            Unit::Minute => "minute",
+            Unit::Second => "second",
+            Unit::Millisecond => return self.time == other.time,
+        };
+        self.start_of(unit_str).time == other.start_of(unit_str).time
+    }
+
+    fn is_same_or_before(&self, other: &Dayjs) -> bool {
+        self.time <= other.time
+    }
+
+    fn is_same_or_after(&self, other: &Dayjs) -> bool {
+        self.time >= other.time
+    }
+
+    fn is_between(&self, start: &Dayjs, end: &Dayjs) -> bool {
+        self.time > start.time && self.time < end.time
+    }
+
+    fn is_between_unit(&self, start: &Dayjs, end: &Dayjs, unit: Unit) -> bool {
+        let unit_str = match unit {
+            Unit::Year => "year",
+            Unit::Month => "month",
+            Unit::Week => "week",
+            Unit::Day => "day",
+            Unit::Hour => "hour",
+            Unit::Minute => "minute",
+            Unit::Second => "second",
+            Unit::Millisecond => return self.time > start.time && self.time < end.time,
+        };
+        let self_start = self.start_of(unit_str).time;
+        let start_start = start.start_of(unit_str).time;
+        let end_start = end.start_of(unit_str).time;
+        self_start > start_start && self_start < end_start
+    }
+}
+
+/// Trait for calculating differences between times
+pub trait DiffTime {
+    /// Get the difference between two times in the specified unit
+    fn diff(&self, other: &Dayjs, unit: Unit) -> i64;
+
+    /// Get the difference in milliseconds
+    fn diff_milliseconds(&self, other: &Dayjs) -> i64;
+
+    /// Get the difference in seconds
+    fn diff_seconds(&self, other: &Dayjs) -> i64;
+
+    /// Get the difference in minutes
+    fn diff_minutes(&self, other: &Dayjs) -> i64;
+
+    /// Get the difference in hours
+    fn diff_hours(&self, other: &Dayjs) -> i64;
+
+    /// Get the difference in days
+    fn diff_days(&self, other: &Dayjs) -> i64;
+
+    /// Get the difference in weeks
+    fn diff_weeks(&self, other: &Dayjs) -> i64;
+
+    /// Get the difference in months
+    fn diff_months(&self, other: &Dayjs) -> i64;
+
+    /// Get the difference in years
+    fn diff_years(&self, other: &Dayjs) -> i64;
+}
+
+impl DiffTime for Dayjs {
+    fn diff(&self, other: &Dayjs, unit: Unit) -> i64 {
+        match unit {
+            Unit::Year => self.diff_years(other),
+            Unit::Month => self.diff_months(other),
+            Unit::Week => self.diff_weeks(other),
+            Unit::Day => self.diff_days(other),
+            Unit::Hour => self.diff_hours(other),
+            Unit::Minute => self.diff_minutes(other),
+            Unit::Second => self.diff_seconds(other),
+            Unit::Millisecond => self.diff_milliseconds(other),
+        }
+    }
+
+    fn diff_milliseconds(&self, other: &Dayjs) -> i64 {
+        self.time.timestamp_millis() - other.time.timestamp_millis()
+    }
+
+    fn diff_seconds(&self, other: &Dayjs) -> i64 {
+        self.time.timestamp() - other.time.timestamp()
+    }
+
+    fn diff_minutes(&self, other: &Dayjs) -> i64 {
+        self.diff_seconds(other) / 60
+    }
+
+    fn diff_hours(&self, other: &Dayjs) -> i64 {
+        self.diff_seconds(other) / 3600
+    }
+
+    fn diff_days(&self, other: &Dayjs) -> i64 {
+        self.diff_seconds(other) / 86400
+    }
+
+    fn diff_weeks(&self, other: &Dayjs) -> i64 {
+        self.diff_days(other) / 7
+    }
+
+    fn diff_months(&self, other: &Dayjs) -> i64 {
+        let years = self.time.year() - other.time.year();
+        let months = self.time.month() as i32 - other.time.month() as i32;
+        (years * 12 + months) as i64
+    }
+
+    fn diff_years(&self, other: &Dayjs) -> i64 {
+        (self.time.year() - other.time.year()) as i64
     }
 }
 
@@ -586,5 +1091,107 @@ impl OperationTime for Dayjs {
     fn subtract_milliseconds(&mut self, milliseconds: i32) {
         let dt = self.time - chrono::Duration::milliseconds(milliseconds as i64);
         self.time = dt;
+    }
+}
+
+/// Create a Dayjs instance from year, month, day, hour, minute, second
+pub fn from_ymd(year: i32, month: u32, day: u32) -> Result<Dayjs, String> {
+    let date = NaiveDate::from_ymd_opt(year, month, day)
+        .ok_or_else(|| format!("Invalid date: {}-{}-{}", year, month, day))?;
+    let datetime = date.and_hms_opt(0, 0, 0).ok_or("Invalid time")?;
+    Ok(Dayjs {
+        time: datetime.and_utc(),
+        ..Default::default()
+    })
+}
+
+/// Create a Dayjs instance from year, month, day, hour, minute, second
+pub fn from_ymdhms(
+    year: i32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    minute: u32,
+    second: u32,
+) -> Result<Dayjs, String> {
+    let date = NaiveDate::from_ymd_opt(year, month, day)
+        .ok_or_else(|| format!("Invalid date: {}-{}-{}", year, month, day))?;
+    let datetime = date
+        .and_hms_opt(hour, minute, second)
+        .ok_or("Invalid time")?;
+    Ok(Dayjs {
+        time: datetime.and_utc(),
+        ..Default::default()
+    })
+}
+
+/// Create a Dayjs instance from a JavaScript-style array [year, month, day, hour, minute, second, millisecond]
+/// Note: month is 0-indexed (0-11) like JavaScript
+pub fn from_array(arr: &[i32]) -> Result<Dayjs, String> {
+    if arr.is_empty() {
+        return Err("Array is empty".to_string());
+    }
+
+    let year = arr[0];
+    let month = arr.get(1).copied().unwrap_or(0) + 1; // Convert from 0-indexed
+    let day = arr.get(2).copied().unwrap_or(1);
+    let hour = arr.get(3).copied().unwrap_or(0);
+    let minute = arr.get(4).copied().unwrap_or(0);
+    let second = arr.get(5).copied().unwrap_or(0);
+    let ms = arr.get(6).copied().unwrap_or(0);
+
+    let date = NaiveDate::from_ymd_opt(year, month as u32, day as u32)
+        .ok_or_else(|| format!("Invalid date: {}-{}-{}", year, month, day))?;
+    let time = NaiveTime::from_hms_milli_opt(hour as u32, minute as u32, second as u32, ms as u32)
+        .ok_or("Invalid time")?;
+    let datetime = date.and_time(time);
+
+    Ok(Dayjs {
+        time: datetime.and_utc(),
+        ..Default::default()
+    })
+}
+
+/// Create a Dayjs from a chrono `DateTime<Utc>`
+pub fn from_datetime(dt: DateTime<Utc>) -> Dayjs {
+    Dayjs {
+        time: dt,
+        ..Default::default()
+    }
+}
+
+/// Create a Dayjs from a chrono NaiveDateTime (assumes UTC)
+pub fn from_naive(ndt: NaiveDateTime) -> Dayjs {
+    Dayjs {
+        time: ndt.and_utc(),
+        ..Default::default()
+    }
+}
+
+/// Parse with a custom format string
+pub fn from_format(s: &str, format: &str) -> Result<Dayjs, String> {
+    let ndt = NaiveDateTime::parse_from_str(s, format)
+        .map_err(|e| format!("Failed to parse '{}' with format '{}': {}", s, format, e))?;
+    Ok(Dayjs {
+        time: ndt.and_utc(),
+        ..Default::default()
+    })
+}
+
+/// Get the minimum of two Dayjs instances
+pub fn min(a: &Dayjs, b: &Dayjs) -> Dayjs {
+    if a.time < b.time {
+        a.clone()
+    } else {
+        b.clone()
+    }
+}
+
+/// Get the maximum of two Dayjs instances
+pub fn max(a: &Dayjs, b: &Dayjs) -> Dayjs {
+    if a.time > b.time {
+        a.clone()
+    } else {
+        b.clone()
     }
 }
