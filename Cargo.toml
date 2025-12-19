@@ -1,6 +1,6 @@
 [package]
 name = "dayjs"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 authors = ["michaelbguo@tencent.com"]
 license = "MIT"
@@ -12,4 +12,4 @@ description = "a date and time library for Rust, inspired by day.js"
 readme = "README.md"
 
 [dependencies]
-chrono = "^0.4"
+chrono = { version = "0.4.19", features = ["serde"] }
