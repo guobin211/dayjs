@@ -1,0 +1,326 @@
+================================================================================
+Day.js Rust vs JavaScript API Test Comparison
+================================================================================
+
+
+[DIFF]
+--------------------------------------------------------------------------------
+
+Test: diff_days
+Description: "Diff in days"
+Status: ✅ PASSED
+
+Test: diff_hours
+Description: "Diff in hours"
+Status: ✅ PASSED
+
+Test: diff_minutes
+Description: "Diff in minutes"
+Status: ✅ PASSED
+
+Test: diff_months
+Description: "Diff in months"
+Status: ✅ PASSED
+
+Test: diff_seconds
+Description: "Diff in seconds"
+Status: ✅ PASSED
+
+Test: diff_years
+Description: "Diff in years"
+Status: ✅ PASSED
+
+
+[DISPLAY]
+--------------------------------------------------------------------------------
+
+Test: format_custom
+Description: "Format custom"
+Status: ✅ PASSED
+
+Test: format_default
+Description: "Format default"
+Status: ❌ FAILED
+Rust:   {
+  "iso": "2023-05-15T10:30:45.000Z",
+  "string": "2023-05-15T10:30:45.000000Z"
+}
+JS:     {
+  "iso": "2023-05-15T02:30:45.000Z",
+  "string": "Mon, 15 May 2023 02:30:45 GMT"
+}
+
+Test: to_iso
+Description: "To ISO string"
+Status: ✅ PASSED
+
+Test: to_json
+Description: "To JSON"
+Status: ✅ PASSED
+
+Test: unix_timestamp
+Description: "Unix timestamp"
+Status: ✅ PASSED
+
+
+[GETSET]
+--------------------------------------------------------------------------------
+
+Test: date
+Description: "Get day of month (1-31)"
+Status: ✅ PASSED
+
+Test: day
+Description: "Get day of week (0-6)"
+Status: ✅ PASSED
+
+Test: hour_minute_second
+Description: "Get hour, minute, second"
+Status: ✅ PASSED
+
+Test: month
+Description: "Get month (0-11)"
+Status: ✅ PASSED
+
+Test: year
+Description: "Get/Set year"
+Status: ✅ PASSED
+
+
+[MANIPULATE]
+--------------------------------------------------------------------------------
+
+Test: add_days
+Description: "Add days"
+Status: ❌ FAILED
+Rust:   {
+  "date": 22,
+  "iso": "2023-05-22T00:00:00.000Z",
+  "month": 4,
+  "year": 2023
+}
+JS:     {
+  "date": 22,
+  "iso": "2023-05-21T16:00:00.000Z",
+  "month": 4,
+  "year": 2023
+}
+
+Test: add_months
+Description: "Add months"
+Status: ✅ PASSED
+
+Test: add_years
+Description: "Add years"
+Status: ❌ FAILED
+Rust:   {
+  "date": 14,
+  "month": 4,
+  "year": 2024
+}
+JS:     {
+  "date": 15,
+  "month": 4,
+  "year": 2024
+}
+
+Test: end_of_day
+Description: "End of day"
+Status: ❌ FAILED
+Rust:   {
+  "hour": 15,
+  "iso": "2023-05-15T15:59:59.999Z",
+  "millisecond": 999,
+  "minute": 59,
+  "second": 59
+}
+JS:     {
+  "hour": 23,
+  "iso": "2023-05-15T15:59:59.999Z",
+  "millisecond": 999,
+  "minute": 59,
+  "second": 59
+}
+
+Test: end_of_month
+Description: "End of month"
+Status: ❌ FAILED
+Rust:   {
+  "date": 31,
+  "hour": 15,
+  "minute": 59
+}
+JS:     {
+  "date": 31,
+  "hour": 23,
+  "minute": 59
+}
+
+Test: end_of_year
+Description: "End of year"
+Status: ✅ PASSED
+
+Test: start_of_day
+Description: "Start of day"
+Status: ❌ FAILED
+Rust:   {
+  "hour": 16,
+  "iso": "2023-05-14T16:00:00.000Z",
+  "millisecond": 0,
+  "minute": 0,
+  "second": 0
+}
+JS:     {
+  "hour": 0,
+  "iso": "2023-05-14T16:00:00.000Z",
+  "millisecond": 0,
+  "minute": 0,
+  "second": 0
+}
+
+Test: start_of_month
+Description: "Start of month"
+Status: ❌ FAILED
+Rust:   {
+  "date": 30,
+  "hour": 16,
+  "minute": 0
+}
+JS:     {
+  "date": 1,
+  "hour": 0,
+  "minute": 0
+}
+
+Test: start_of_year
+Description: "Start of year"
+Status: ❌ FAILED
+Rust:   {
+  "date": 31,
+  "month": 11
+}
+JS:     {
+  "date": 1,
+  "month": 0
+}
+
+Test: subtract_days
+Description: "Subtract days"
+Status: ✅ PASSED
+
+
+[PARSE]
+--------------------------------------------------------------------------------
+
+Test: now
+Description: "Current time"
+Status: ✅ PASSED
+
+Test: string_date_only
+Description: "Parse date only string"
+Status: ✅ PASSED
+
+Test: string_iso
+Description: "Parse ISO 8601 string"
+Status: ❌ FAILED
+Rust:   {
+  "date": 15,
+  "hour": 10,
+  "iso": "2023-05-15T10:30:45.000Z",
+  "minute": 30,
+  "month": 4,
+  "second": 45,
+  "year": 2023
+}
+JS:     {
+  "date": 15,
+  "hour": 18,
+  "iso": "2023-05-15T10:30:45.000Z",
+  "minute": 30,
+  "month": 4,
+  "second": 45,
+  "year": 2023
+}
+
+Test: unix_milliseconds
+Description: "Parse Unix timestamp (milliseconds)"
+Status: ✅ PASSED
+
+Test: unix_seconds
+Description: "Parse Unix timestamp (seconds)"
+Status: ✅ PASSED
+
+
+[QUERY]
+--------------------------------------------------------------------------------
+
+Test: is_after
+Description: "Is after"
+Status: ✅ PASSED
+
+Test: is_before
+Description: "Is before"
+Status: ✅ PASSED
+
+Test: is_between
+Description: "Is between"
+Status: ⚠️  JS ERROR
+JS Error: "d2.isBetween is not a function"
+Rust:     {
+  "between": true,
+  "notBetween": false
+}
+
+Test: is_same
+Description: "Is same"
+Status: ✅ PASSED
+
+Test: is_same_or_after
+Description: "Is same or after"
+Status: ⚠️  JS ERROR
+JS Error: "d1.isSameOrAfter is not a function"
+Rust:     {
+  "after": true,
+  "same": true
+}
+
+Test: is_same_or_before
+Description: "Is same or before"
+Status: ⚠️  JS ERROR
+JS Error: "d1.isSameOrBefore is not a function"
+Rust:     {
+  "before": true,
+  "same": true
+}
+
+
+[UTILITIES]
+--------------------------------------------------------------------------------
+
+Test: clone
+Description: "Clone dayjs object"
+Status: ✅ PASSED
+
+Test: days_in_month
+Description: "Days in month"
+Status: ✅ PASSED
+
+Test: is_leap_year
+Description: "Is leap year"
+Status: ⚠️  JS ERROR
+JS Error: "dayjs(...).isLeapYear is not a function"
+Rust:     {
+  "1900": false,
+  "2000": true,
+  "2023": false,
+  "2024": true
+}
+
+
+================================================================================
+SUMMARY
+================================================================================
+Total Tests:  40
+Passed:       27 (67%)
+Failed:       9 (22%)
+================================================================================

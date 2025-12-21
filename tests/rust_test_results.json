@@ -1,0 +1,321 @@
+{
+  "diff": {
+    "diff_days": {
+      "description": "Diff in days",
+      "result": {
+        "diff": 5,
+        "reverseDiff": -5
+      }
+    },
+    "diff_hours": {
+      "description": "Diff in hours",
+      "result": {
+        "diff": 5
+      }
+    },
+    "diff_minutes": {
+      "description": "Diff in minutes",
+      "result": {
+        "diff": 30
+      }
+    },
+    "diff_months": {
+      "description": "Diff in months",
+      "result": {
+        "diff": 4
+      }
+    },
+    "diff_seconds": {
+      "description": "Diff in seconds",
+      "result": {
+        "diff": 45
+      }
+    },
+    "diff_years": {
+      "description": "Diff in years",
+      "result": {
+        "diff": 3
+      }
+    }
+  },
+  "display": {
+    "format_custom": {
+      "description": "Format custom",
+      "result": {
+        "DD/MM/YYYY": "15/05/2023",
+        "YYYY-MM-DD": "2023-05-15",
+        "YYYY-MM-DD HH:mm:ss": "2023-05-15 10:30:45",
+        "YYYY/MM/DD": "2023/05/15"
+      }
+    },
+    "format_default": {
+      "description": "Format default",
+      "result": {
+        "iso": "2023-05-15T10:30:45.000Z",
+        "string": "2023-05-15T10:30:45.000000Z"
+      }
+    },
+    "to_iso": {
+      "description": "To ISO string",
+      "result": {
+        "iso": "2023-05-15T10:30:45.123Z"
+      }
+    },
+    "to_json": {
+      "description": "To JSON",
+      "result": {
+        "json": "2023-05-15T10:30:45.000Z"
+      }
+    },
+    "unix_timestamp": {
+      "description": "Unix timestamp",
+      "result": {
+        "unix": 1684146645,
+        "valueOf": 1684146645000
+      }
+    }
+  },
+  "getSet": {
+    "date": {
+      "description": "Get day of month (1-31)",
+      "result": {
+        "date": 15
+      }
+    },
+    "day": {
+      "description": "Get day of week (0-6)",
+      "result": {
+        "day": 1
+      }
+    },
+    "hour_minute_second": {
+      "description": "Get hour, minute, second",
+      "result": {
+        "hour": 10,
+        "millisecond": 0,
+        "minute": 30,
+        "second": 45
+      }
+    },
+    "month": {
+      "description": "Get month (0-11)",
+      "result": {
+        "date": 15,
+        "month": 4
+      }
+    },
+    "year": {
+      "description": "Get/Set year",
+      "result": {
+        "date": 15,
+        "month": 4,
+        "year": 2023
+      }
+    }
+  },
+  "manipulate": {
+    "add_days": {
+      "description": "Add days",
+      "result": {
+        "date": 22,
+        "iso": "2023-05-22T00:00:00.000Z",
+        "month": 4,
+        "year": 2023
+      }
+    },
+    "add_months": {
+      "description": "Add months",
+      "result": {
+        "date": 15,
+        "month": 6,
+        "year": 2023
+      }
+    },
+    "add_years": {
+      "description": "Add years",
+      "result": {
+        "date": 14,
+        "month": 4,
+        "year": 2024
+      }
+    },
+    "end_of_day": {
+      "description": "End of day",
+      "result": {
+        "hour": 15,
+        "iso": "2023-05-15T15:59:59.999Z",
+        "millisecond": 999,
+        "minute": 59,
+        "second": 59
+      }
+    },
+    "end_of_month": {
+      "description": "End of month",
+      "result": {
+        "date": 31,
+        "hour": 15,
+        "minute": 59
+      }
+    },
+    "end_of_year": {
+      "description": "End of year",
+      "result": {
+        "date": 31,
+        "month": 11
+      }
+    },
+    "start_of_day": {
+      "description": "Start of day",
+      "result": {
+        "hour": 16,
+        "iso": "2023-05-14T16:00:00.000Z",
+        "millisecond": 0,
+        "minute": 0,
+        "second": 0
+      }
+    },
+    "start_of_month": {
+      "description": "Start of month",
+      "result": {
+        "date": 30,
+        "hour": 16,
+        "minute": 0
+      }
+    },
+    "start_of_year": {
+      "description": "Start of year",
+      "result": {
+        "date": 31,
+        "month": 11
+      }
+    },
+    "subtract_days": {
+      "description": "Subtract days",
+      "result": {
+        "date": 8,
+        "month": 4,
+        "year": 2023
+      }
+    }
+  },
+  "parse": {
+    "now": {
+      "description": "Current time",
+      "result": {
+        "hasTime": true,
+        "isValid": true
+      }
+    },
+    "string_date_only": {
+      "description": "Parse date only string",
+      "result": {
+        "date": 15,
+        "month": 4,
+        "year": 2023
+      }
+    },
+    "string_iso": {
+      "description": "Parse ISO 8601 string",
+      "result": {
+        "date": 15,
+        "hour": 10,
+        "iso": "2023-05-15T10:30:45.000Z",
+        "minute": 30,
+        "month": 4,
+        "second": 45,
+        "year": 2023
+      }
+    },
+    "unix_milliseconds": {
+      "description": "Parse Unix timestamp (milliseconds)",
+      "result": {
+        "date": 15,
+        "month": 4,
+        "unix": 1684147845,
+        "valueOf": 1684147845000,
+        "year": 2023
+      }
+    },
+    "unix_seconds": {
+      "description": "Parse Unix timestamp (seconds)",
+      "result": {
+        "date": 15,
+        "month": 4,
+        "unix": 1684147845,
+        "year": 2023
+      }
+    }
+  },
+  "query": {
+    "is_after": {
+      "description": "Is after",
+      "result": {
+        "result": false,
+        "reverse": true
+      }
+    },
+    "is_before": {
+      "description": "Is before",
+      "result": {
+        "result": true,
+        "reverse": false
+      }
+    },
+    "is_between": {
+      "description": "Is between",
+      "result": {
+        "between": true,
+        "notBetween": false
+      }
+    },
+    "is_same": {
+      "description": "Is same",
+      "result": {
+        "different": false,
+        "same": true
+      }
+    },
+    "is_same_or_after": {
+      "description": "Is same or after",
+      "result": {
+        "after": true,
+        "same": true
+      }
+    },
+    "is_same_or_before": {
+      "description": "Is same or before",
+      "result": {
+        "before": true,
+        "same": true
+      }
+    }
+  },
+  "utilities": {
+    "clone": {
+      "description": "Clone dayjs object",
+      "result": {
+        "same": true,
+        "year": 2023
+      }
+    },
+    "days_in_month": {
+      "description": "Days in month",
+      "result": {
+        "april": 30,
+        "february": 28,
+        "february_leap": 29,
+        "january": 31,
+        "march": 31
+      }
+    },
+    "is_leap_year": {
+      "description": "Is leap year",
+      "result": {
+        "1900": false,
+        "2000": true,
+        "2023": false,
+        "2024": true
+      }
+    }
+  }
+}

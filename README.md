@@ -1,5 +1,9 @@
 # dayjs
 
+`to_string` will return the `UTC` format，not `GMT` format. use `to_gmt` for Local Time.
+
+`UTC` + `TIMEZONE` = `Local Time`
+
 [![Crates.io](https://img.shields.io/crates/v/dayjs.svg)](https://crates.io/crates/dayjs)
 [![Documentation](https://docs.rs/dayjs/badge.svg)](https://docs.rs/dayjs)
 [![License](https://img.shields.io/crates/l/dayjs.svg)](LICENSE)
@@ -133,15 +137,20 @@ use dayjs::{dayjs, DisplayTime};
 
 let d = dayjs();
 
+// Default to_string (UTC time)
+d.to_string();  // "2025-01-25 10:30:45.000 UTC" (UTC format)
+
 // Custom format
 d.format("%Y-%m-%d %H:%M:%S");
 
 // Built-in formats
 d.to_iso();     // "2025-01-25T10:30:45.000Z"
 d.to_utc();     // "2025-01-25 10:30:45 +00:00"
-d.to_gmt();     // "Sat, 25 Jan 2025 10:30:45 GMT"
+d.to_gmt();     // "Sat, 25 Jan 2025 10:30:45 GMT" (local time)
 d.to_array();   // "[ 2025, 0, 25, 10, 30, 45, 0 ]"
 ```
+
+> **Note:** The default `to_string()` method returns UTC time. For local time representation, use `to_gmt()`.
 
 ### Query
 
@@ -212,14 +221,22 @@ let latest = max(&d1, &d2);
 
 ## Supported Parse Formats
 
-| Format | Example |
-|--------|---------|
-| RFC 3339 | `2025-01-25T10:30:45Z` |
-| RFC 2822 | `Sat, 25 Jan 2025 10:30:45 +0000` |
-| ISO 8601 | `2025-01-25T10:30:45+08:00` |
-| Date Time | `2025-01-25 10:30:45` |
-| Date Only | `2025-01-25`, `2025/01/25` |
-| UTC Suffix | `2025-01-25 10:30:45 UTC` |
+| Format     | Example                           |
+| ---------- | --------------------------------- |
+| RFC 3339   | `2025-01-25T10:30:45Z`            |
+| RFC 2822   | `Sat, 25 Jan 2025 10:30:45 +0000` |
+| ISO 8601   | `2025-01-25T10:30:45+08:00`       |
+| Date Time  | `2025-01-25 10:30:45`             |
+| Date Only  | `2025-01-25`, `2025/01/25`        |
+| UTC Suffix | `2025-01-25 10:30:45 UTC`         |
+
+### Run Tests
+
+```bash
+# Or manually
+pnpm install
+pnpm run test
+```
 
 ## License
 

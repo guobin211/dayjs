@@ -1,0 +1,29 @@
+{
+  "name": "dayjs-rust-tests",
+  "version": "0.2.1",
+  "type": "module",
+  "description": "Test suite for comparing Rust and JavaScript Day.js implementations",
+  "scripts": {
+    "test:js": "node tests/test_case.js",
+    "test:rust": "cargo test --test test_case",
+    "test": "npm run test:js && npm run test:rust",
+    "release": "cargo build --release",
+    "lint": "cargo clippy --all --fix --allow-dirty --allow-staged",
+    "test:all": "cargo test",
+    "fmt": "cargo fmt --all && prettier --write ./*.md",
+    "login": "cargo login --registry crates-io",
+    "publish": "cargo publish --registry crates-io"
+  },
+  "dependencies": {
+    "dayjs": "^1.11.10"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "dayjs",
+    "date",
+    "time",
+    "testing"
+  ],
+  "author": "michaelbguo@tencent.com",
+  "license": "MIT"
+}

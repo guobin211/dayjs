@@ -1,9 +1,10 @@
 /// re-export chrono
 pub use chrono;
 use chrono::{
-    DateTime, Datelike, Local, NaiveDate, NaiveDateTime, NaiveTime, Offset, TimeZone as CTimeZone,
-    Timelike, Utc, Weekday,
+    DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, NaiveTime, Offset,
+    TimeZone as CTimeZone, Timelike, Utc, Weekday,
 };
+use serde_json::{Value, json};
 use std::fmt::{Display, Formatter};
 
 /// TimeZone enum for representing different time zone formats.
@@ -26,11 +27,11 @@ use std::fmt::{Display, Formatter};
 ///
 #[derive(Clone, Debug, PartialEq)]
 pub enum TimeZone {
-    // 时区偏移, 如: "+08:00"
+    // offset, 如: "+08:00"
     TimeZoneTime(String),
-    // 时区城市, 如: "Asia/Shanghai"
+    // city, 如: "Asia/Shanghai"
     TimeZoneCity(String),
-    // 时区编号, -12 ~ +12
+    // order, -12 ~ +12
     TimeZoneNumber(i8),
 }
 
@@ -39,6 +40,41 @@ impl TimeZone {
     pub fn current() -> Self {
         let offset = Local::now().offset().fix();
         TimeZone::TimeZoneTime(offset.to_string())
+    }
+
+    /// Parse timezone from string
+    ///
+    /// Attempts to parse a string into a TimeZone enum:
+    /// - If it starts with '+' or '-', treats it as TimeZoneTime (offset)
+    /// - If it's a valid number between -12 and 12, treats it as TimeZoneNumber
+    /// - Otherwise, treats it as TimeZoneCity
+    pub fn from_string(s: String) -> Self {
+        let s = s.trim();
+
+        // Check if it's an offset format (starts with + or -)
+        if s.starts_with('+') || s.starts_with('-') {
+            return TimeZone::TimeZoneTime(s.to_string());
+        }
+
+        // Try to parse as number
+        if let Ok(num) = s.parse::<i8>()
+            && (-12..=14).contains(&num)
+        {
+            return TimeZone::TimeZoneNumber(num);
+        }
+
+        // Default to city format
+        TimeZone::TimeZoneCity(s.to_string())
+    }
+}
+
+impl Display for TimeZone {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TimeZone::TimeZoneTime(s) => write!(f, "{}", s),
+            TimeZone::TimeZoneCity(s) => write!(f, "{}", s),
+            TimeZone::TimeZoneNumber(n) => write!(f, "{}", n),
+        }
     }
 }
 
@@ -67,6 +103,73 @@ impl Default for Dayjs {
             tz: TimeZone::current(),
             time: Utc::now(),
         }
+    }
+}
+
+impl Dayjs {
+    /// Convert Dayjs to JSON object
+    ///
+    /// # Returns
+    /// Returns a JSON object with timezone and time information
+    ///
+    /// # Examples
+    /// ```
+    /// use dayjs::dayjs;
+    /// let d = dayjs();
+    /// let obj = d.to_object();
+    /// println!("{}", obj);
+    /// ```
+    pub fn to_object(&self) -> Value {
+        json!({
+            "tz": self.tz.to_string(),
+            "time": self.time.to_rfc3339(),
+        })
+    }
+
+    /// Create Dayjs from JSON object
+    ///
+    /// # Parameters
+    /// - `obj`: JSON object containing "tz" and "time" fields
+    ///
+    /// # Returns
+    /// Returns a Result with Dayjs on success, error message on failure
+    ///
+    /// # Examples
+    /// ```
+    /// use dayjs::Dayjs;
+    /// use serde_json::json;
+    ///
+    /// let obj = json!({
+    ///     "tz": "+08:00",
+    ///     "time": "2025-12-21T14:30:00Z"
+    /// });
+    /// let d = Dayjs::from_object(obj).unwrap();
+    /// ```
+    pub fn from_object(obj: Value) -> Result<Self, String> {
+        // Extract timezone
+        let tz_str = obj["tz"]
+            .as_str()
+            .ok_or("Missing or invalid 'tz' field")?
+            .to_string();
+
+        // Extract time string
+        let time_str = obj["time"]
+            .as_str()
+            .ok_or("Missing or invalid 'time' field")?;
+
+        // Parse timezone
+        let tz = TimeZone::from_string(tz_str);
+
+        // Parse time - try multiple formats
+        let time = if let Ok(dt) = DateTime::parse_from_rfc3339(time_str) {
+            dt.with_timezone(&Utc)
+        } else if let Some(dt) = parse_date_time(time_str) {
+            dt
+        } else {
+            return Err(format!("Failed to parse time: {}", time_str));
+        };
+
+        Ok(Dayjs { tz, time })
     }
 }
 
@@ -199,6 +302,41 @@ pub fn from_timezone(tz: TimeZone) -> Dayjs {
     }
 }
 
+/// Parse timezone offset string like "+08:00", "-05:00" into FixedOffset
+///
+/// # Parameters
+/// - `offset_str`: The offset string to parse (e.g., "+08:00", "-05:00")
+///
+/// # Returns
+/// Returns `FixedOffset` on successful parsing, error otherwise
+fn parse_offset(offset_str: &str) -> Result<FixedOffset, String> {
+    let offset_str = offset_str.trim();
+
+    // Parse format: "+08:00" or "-05:00"
+    if offset_str.len() < 5 {
+        return Err("Invalid offset format".to_string());
+    }
+
+    let sign = match &offset_str[0..1] {
+        "+" => 1,
+        "-" => -1,
+        _ => return Err("Offset must start with + or -".to_string()),
+    };
+
+    // Try to parse hours and minutes
+    let parts: Vec<&str> = offset_str[1..].split(':').collect();
+    if parts.len() != 2 {
+        return Err("Invalid offset format, expected HH:MM".to_string());
+    }
+
+    let hours: i32 = parts[0].parse().map_err(|_| "Invalid hours")?;
+    let minutes: i32 = parts[1].parse().map_err(|_| "Invalid minutes")?;
+
+    let total_seconds = sign * (hours * 3600 + minutes * 60);
+
+    FixedOffset::east_opt(total_seconds).ok_or_else(|| "Offset out of valid range".to_string())
+}
+
 /// Parse date time string, supports ISO 8601 format (with timezone offset and 'Z' suffix) and UTC time
 ///
 /// # Parameters
@@ -275,11 +413,11 @@ pub fn parse_date_time(s: &str) -> Option<DateTime<Utc>> {
     None
 }
 
+/// Display implementation for Dayjs
+/// Displays the UTC time in ISO 8601 format (e.g., 2025-12-21T14:29:42.009427Z)
 impl Display for Dayjs {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let s = self.time.to_utc();
-        let v = s.to_string();
-        write!(f, "{v}")
+        write!(f, "{}", self.time.format("%Y-%m-%dT%H:%M:%S%.6fZ"))
     }
 }
 
@@ -321,22 +459,22 @@ impl Dayjs {
         self.time.timestamp()
     }
 
-    /// Get the current time in milliseconds since the Unix epoch.
-    pub fn millisecond(&self) -> i64 {
-        self.time.timestamp_millis()
+    /// Get the millisecond (0-999)
+    pub fn millisecond(&self) -> u32 {
+        self.time.timestamp_subsec_millis()
     }
 
-    /// Get the current time in seconds since the Unix epoch.
-    pub fn second(&self) -> i64 {
-        self.time.timestamp()
+    /// Get the second (0-59)
+    pub fn second(&self) -> u32 {
+        self.time.second()
     }
 
-    /// Get the current time in nanoseconds since the Unix epoch.
+    /// Get the minute (0-59)
     pub fn minute(&self) -> u32 {
         self.time.minute()
     }
 
-    /// Get the current time in hours since the Unix epoch.
+    /// Get the hour (0-23)
     pub fn hour(&self) -> u32 {
         self.time.hour()
     }
@@ -428,45 +566,54 @@ impl Dayjs {
     /// Get start of a unit of time
     pub fn start_of(&self, unit: &str) -> Dayjs {
         let mut result = self.clone();
+
+        // Convert to local timezone for day-based operations
+        let local_time = self.time.with_timezone(&Local);
+
         match unit.to_lowercase().as_str() {
             "year" => {
-                result.time = result
-                    .time
+                let adjusted = local_time
                     .with_month(1)
                     .and_then(|t| t.with_day(1))
                     .and_then(|t| t.with_hour(0))
                     .and_then(|t| t.with_minute(0))
                     .and_then(|t| t.with_second(0))
-                    .and_then(|t| t.with_nanosecond(0))
-                    .unwrap_or(result.time);
+                    .and_then(|t| t.with_nanosecond(0));
+                if let Some(dt) = adjusted {
+                    result.time = dt.with_timezone(&Utc);
+                }
             }
             "month" => {
-                result.time = result
-                    .time
+                let adjusted = local_time
                     .with_day(1)
                     .and_then(|t| t.with_hour(0))
                     .and_then(|t| t.with_minute(0))
                     .and_then(|t| t.with_second(0))
-                    .and_then(|t| t.with_nanosecond(0))
-                    .unwrap_or(result.time);
+                    .and_then(|t| t.with_nanosecond(0));
+                if let Some(dt) = adjusted {
+                    result.time = dt.with_timezone(&Utc);
+                }
             }
             "week" => {
-                let weekday = result.time.weekday().num_days_from_sunday();
-                result.time = (result.time - chrono::Duration::days(weekday as i64))
+                let weekday = local_time.weekday().num_days_from_sunday();
+                let adjusted = (local_time - chrono::Duration::days(weekday as i64))
                     .with_hour(0)
                     .and_then(|t| t.with_minute(0))
                     .and_then(|t| t.with_second(0))
-                    .and_then(|t| t.with_nanosecond(0))
-                    .unwrap_or(result.time);
+                    .and_then(|t| t.with_nanosecond(0));
+                if let Some(dt) = adjusted {
+                    result.time = dt.with_timezone(&Utc);
+                }
             }
             "day" | "date" => {
-                result.time = result
-                    .time
+                let adjusted = local_time
                     .with_hour(0)
                     .and_then(|t| t.with_minute(0))
                     .and_then(|t| t.with_second(0))
-                    .and_then(|t| t.with_nanosecond(0))
-                    .unwrap_or(result.time);
+                    .and_then(|t| t.with_nanosecond(0));
+                if let Some(dt) = adjusted {
+                    result.time = dt.with_timezone(&Utc);
+                }
             }
             "hour" => {
                 result.time = result
@@ -494,20 +641,25 @@ impl Dayjs {
     /// Get end of a unit of time
     pub fn end_of(&self, unit: &str) -> Dayjs {
         let mut result = self.clone();
+
+        // Convert to local timezone for day-based operations
+        let local_time = self.time.with_timezone(&Local);
+
         match unit.to_lowercase().as_str() {
             "year" => {
-                result.time = result
-                    .time
+                let adjusted = local_time
                     .with_month(12)
                     .and_then(|t| t.with_day(31))
                     .and_then(|t| t.with_hour(23))
                     .and_then(|t| t.with_minute(59))
                     .and_then(|t| t.with_second(59))
-                    .and_then(|t| t.with_nanosecond(999_999_999))
-                    .unwrap_or(result.time);
+                    .and_then(|t| t.with_nanosecond(999_999_999));
+                if let Some(dt) = adjusted {
+                    result.time = dt.with_timezone(&Utc);
+                }
             }
             "month" => {
-                let next_month = result.time.with_day(1).and_then(|t| {
+                let next_month = local_time.with_day(1).and_then(|t| {
                     if t.month() == 12 {
                         t.with_year(t.year() + 1).and_then(|t| t.with_month(1))
                     } else {
@@ -515,32 +667,37 @@ impl Dayjs {
                     }
                 });
                 if let Some(next) = next_month {
-                    result.time = (next - chrono::Duration::days(1))
+                    let adjusted = (next - chrono::Duration::days(1))
                         .with_hour(23)
                         .and_then(|t| t.with_minute(59))
                         .and_then(|t| t.with_second(59))
-                        .and_then(|t| t.with_nanosecond(999_999_999))
-                        .unwrap_or(result.time);
+                        .and_then(|t| t.with_nanosecond(999_999_999));
+                    if let Some(dt) = adjusted {
+                        result.time = dt.with_timezone(&Utc);
+                    }
                 }
             }
             "week" => {
-                let weekday = result.time.weekday().num_days_from_sunday();
+                let weekday = local_time.weekday().num_days_from_sunday();
                 let days_to_saturday = 6 - weekday;
-                result.time = (result.time + chrono::Duration::days(days_to_saturday as i64))
+                let adjusted = (local_time + chrono::Duration::days(days_to_saturday as i64))
                     .with_hour(23)
                     .and_then(|t| t.with_minute(59))
                     .and_then(|t| t.with_second(59))
-                    .and_then(|t| t.with_nanosecond(999_999_999))
-                    .unwrap_or(result.time);
+                    .and_then(|t| t.with_nanosecond(999_999_999));
+                if let Some(dt) = adjusted {
+                    result.time = dt.with_timezone(&Utc);
+                }
             }
             "day" | "date" => {
-                result.time = result
-                    .time
+                let adjusted = local_time
                     .with_hour(23)
                     .and_then(|t| t.with_minute(59))
                     .and_then(|t| t.with_second(59))
-                    .and_then(|t| t.with_nanosecond(999_999_999))
-                    .unwrap_or(result.time);
+                    .and_then(|t| t.with_nanosecond(999_999_999));
+                if let Some(dt) = adjusted {
+                    result.time = dt.with_timezone(&Utc);
+                }
             }
             "hour" => {
                 result.time = result
@@ -614,17 +771,20 @@ pub trait DisplayTime {
     /// Formats to array string. [ 2019, 0, 25, 0, 0, 0, 0 ]
     fn to_array(&self) -> String;
 
-    /// Formats to iso string. "2019-01-25T02:00:00.000Z"
+    /// Formats to iso string. "2025-12-21T14:44:55.240Z"
     fn to_iso(&self) -> String;
 
-    /// Formats to utc string. "2019-01-25 00:00:00 +00:00"
+    /// Formats to utc string. "2025-12-21T14:44:55.240434Z"
     fn to_utc(&self) -> String;
 
-    /// Formats to gmt string. "Fri, 25 Jan 2019 00:00:00 GMT"
+    /// Formats to gmt string. "Sun, 21 Dec 2025 14:44:55 GMT"
     fn to_gmt(&self) -> String;
 
     /// Converts the time to a timestamp in seconds.
     fn to_timestamp(&self) -> i64;
+
+    /// Formats the date time to a local string.
+    fn to_local(&self) -> String;
 }
 
 impl DisplayTime for Dayjs {
@@ -660,16 +820,7 @@ impl DisplayTime for Dayjs {
 
     /// Formats the date time to a UTC string.
     fn to_utc(&self) -> String {
-        let dt = self.time;
-        format!(
-            "{:04}-{:02}-{:02} {:02}:{:02}:{:02} +00:00",
-            dt.year(),
-            dt.month(),
-            dt.day(),
-            dt.hour(),
-            dt.minute(),
-            dt.second()
-        )
+        self.to_string()
     }
 
     /// Formats the date time to a GMT string.
@@ -691,6 +842,41 @@ impl DisplayTime for Dayjs {
     fn to_timestamp(&self) -> i64 {
         let dt = self.time;
         dt.timestamp()
+    }
+
+    /// Formats the date time to a local string.
+    fn to_local(&self) -> String {
+        // Convert UTC time to timezone specified in self.tz
+        match &self.tz {
+            TimeZone::TimeZoneTime(offset_str) => {
+                // Parse offset string like "+08:00" or "-05:00"
+                if let Ok(offset) = parse_offset(offset_str) {
+                    let local_time = self.time.with_timezone(&offset);
+                    format!("{}", local_time.format("%Y-%m-%dT%H:%M:%S%.6f%:z"))
+                } else {
+                    // Fallback to system local time if parsing fails
+                    let local_time: DateTime<Local> = DateTime::from(self.time);
+                    format!("{}", local_time.format("%Y-%m-%dT%H:%M:%S%.6f%:z"))
+                }
+            }
+            TimeZone::TimeZoneNumber(hours) => {
+                // Convert hours to seconds for FixedOffset
+                let seconds = (*hours as i32) * 3600;
+                if let Some(offset) = FixedOffset::east_opt(seconds) {
+                    let local_time = self.time.with_timezone(&offset);
+                    format!("{}", local_time.format("%Y-%m-%dT%H:%M:%S%.6f%:z"))
+                } else {
+                    // Fallback to UTC if offset is invalid
+                    format!("{}", self.time.format("%Y-%m-%dT%H:%M:%S%.6fZ"))
+                }
+            }
+            TimeZone::TimeZoneCity(_city) => {
+                // For city-based timezones, fallback to system local time
+                // Note: Full city timezone support requires chrono-tz crate
+                let local_time: DateTime<Local> = DateTime::from(self.time);
+                format!("{}", local_time.format("%Y-%m-%dT%H:%M:%S%.6f%:z"))
+            }
+        }
     }
 }
 
@@ -1193,5 +1379,87 @@ pub fn max(a: &Dayjs, b: &Dayjs) -> Dayjs {
         a.clone()
     } else {
         b.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_from_object_and_to_object() {
+        // Test round-trip conversion
+        let d1 = dayjs();
+        let obj = d1.to_object();
+        let d2 = Dayjs::from_object(obj).unwrap();
+
+        assert_eq!(d1.time, d2.time);
+        assert_eq!(d1.tz, d2.tz);
+    }
+
+    #[test]
+    fn test_from_object_with_offset_timezone() {
+        let obj = json!({
+            "tz": "+08:00",
+            "time": "2025-12-21T14:30:00Z"
+        });
+
+        let d = Dayjs::from_object(obj).unwrap();
+        assert_eq!(d.to_string(), "2025-12-21T14:30:00.000000Z");
+
+        let local = d.to_local();
+        assert!(local.contains("22:30:00")); // UTC+8
+        assert!(local.contains("+08:00"));
+    }
+
+    #[test]
+    fn test_from_object_with_number_timezone() {
+        let obj = json!({
+            "tz": "9",
+            "time": "2025-12-21T14:30:00Z"
+        });
+
+        let d = Dayjs::from_object(obj).unwrap();
+        let local = d.to_local();
+        assert!(local.contains("23:30:00")); // UTC+9
+        assert!(local.contains("+09:00"));
+    }
+
+    #[test]
+    fn test_from_object_missing_field() {
+        let obj = json!({
+            "tz": "+08:00"
+        });
+
+        let result = Dayjs::from_object(obj);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("time"));
+    }
+
+    #[test]
+    fn test_from_object_invalid_time() {
+        let obj = json!({
+            "tz": "+08:00",
+            "time": "invalid-time-format"
+        });
+
+        let result = Dayjs::from_object(obj);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_timezone_from_string() {
+        // Test offset format
+        let tz1 = TimeZone::from_string("+08:00".to_string());
+        assert_eq!(tz1, TimeZone::TimeZoneTime("+08:00".to_string()));
+
+        // Test number format
+        let tz2 = TimeZone::from_string("9".to_string());
+        assert_eq!(tz2, TimeZone::TimeZoneNumber(9));
+
+        // Test city format
+        let tz3 = TimeZone::from_string("Asia/Shanghai".to_string());
+        assert_eq!(tz3, TimeZone::TimeZoneCity("Asia/Shanghai".to_string()));
     }
 }

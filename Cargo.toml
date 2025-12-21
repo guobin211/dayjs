@@ -1,6 +1,6 @@
 [package]
 name = "dayjs"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 authors = ["michaelbguo@tencent.com"]
 license = "MIT"
@@ -13,3 +13,4 @@ readme = "README.md"
 
 [dependencies]
 chrono = { version = "0.4.19", features = ["serde"] }
+serde_json = "1.0"
